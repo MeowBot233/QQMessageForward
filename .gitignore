@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.log
+
+# QQ
+image/
+*_token
+*_token_bak
+device.json
+qrcode.png
