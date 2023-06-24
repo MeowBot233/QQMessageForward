@@ -132,7 +132,8 @@ function pushMsg(e) {
 function pushGroupMsg(e) {
 
     const group = e.group_name;
-    const sender = e.sender.card;
+    const friend = client.pickFriend(e.sender.user_id);
+    const sender = e.sender.card || friend?.remark || e.sender.nickname;
     const msg = e.raw_message;
     const text = [
         '<i>[',
@@ -153,7 +154,7 @@ function pushGroupMsg(e) {
 async function push(text) {
     try {
         const body = {
-            id: Number(PUSH_TARGET),
+            token: PUSH_TARGET,
             text: text,
             html: true
         }
