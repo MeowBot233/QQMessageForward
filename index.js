@@ -4,6 +4,7 @@ require("dotenv").config();
 const qq = require("icqq");
 
 const PUSH_TARGET = process.env.PUSH_TARGET;
+const MAX_RETRIES = Number(process.env.MAX_RETRIES);
 const API_URL = process.env.API_URL || "https://push.meowbot.page/push";
 const QQ_PLATFORM = process.env.QQ_PLATFORM;
 const QQ_DATA_DIR = process.env.QQ_DATA_DIR;
@@ -138,7 +139,7 @@ function pushGroupMsg(e) {
     const text = [
         '<i>[',
         escapeHTML(group),
-        ']</i> ',
+        ']</i>\n',
         '<b>',
         escapeHTML(sender),
         '</b>',
@@ -148,10 +149,12 @@ function pushGroupMsg(e) {
     push(text);
 }
 
+
 /**
  * @param {string} text 
  */
-async function push(text) {
+async function push(text, retries = 0) {
+    if(retries > 0) console.log('推送失败，重试第' + retries + '次');
     try {
         const body = {
             token: PUSH_TARGET,
@@ -171,11 +174,12 @@ async function push(text) {
         }
         else {
             console.error(res.statusText);
+            if(retries < MAX_RETRIES) push(text, retries + 1);
         }
     } catch (error) {
         console.error(error);
+        if(retries < MAX_RETRIES) push(text, retries + 1);
     }
-
 }
 
 /**
