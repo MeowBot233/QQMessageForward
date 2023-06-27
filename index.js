@@ -4,6 +4,7 @@ require("dotenv").config();
 const qq = require("icqq");
 
 const PUSH_TARGET = process.env.PUSH_TARGET;
+const THREAD_ID = Number(process.env.THREAD_ID);
 const MAX_RETRIES = Number(process.env.MAX_RETRIES);
 const API_URL = process.env.API_URL || "https://push.meowbot.page/push";
 const QQ_PLATFORM = process.env.QQ_PLATFORM;
@@ -159,7 +160,8 @@ async function push(text, retries = 0) {
         const body = {
             token: PUSH_TARGET,
             text: text,
-            html: true
+            html: true,
+            thread_id: THREAD_ID
         }
         console.log(JSON.stringify(body));
         const res = await fetch(API_URL, {
