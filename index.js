@@ -111,33 +111,56 @@ client.on('message.group', (e) => {
     }
 })
 
+/**
+ * 
+ * @param {MessageElem[]} msgs 
+ */
+function resolveMessage(msgs) {
+    const text = [];
+    const images = [];
+
+    msgs.forEach((msg) => {
+        switch (msg.type) {
+            case 'image':
+                images.push(msg.url);
+                break;
+            default:
+                text.push(msg.text);
+                break;
+        }
+    })
+    return {
+        text: text.join(' '),
+        images
+    }
+}
+
 
 /**
  * @param {qq.PrivateMessageEvent} e
  */
 function pushMsg(e) {
     const sender = e.friend ? e.friend.remark : e.nickname;
-    const msg = e.raw_message;
-    const text = [
+    const { text, images } = resolveMessage(e.message);
+    const msg = [
         '<b>',
         escapeHTML(sender),
         '</b>',
         '\n',
-        escapeHTML(msg)
+        escapeHTML(text)
     ].join('');
-    push(text);
+    push(msg, images);
 }
 
 /**
  * @param {qq.GroupMessageEvent} e
  */
 function pushGroupMsg(e) {
-
     const group = e.group_name;
     const friend = client.pickFriend(e.sender.user_id);
     const sender = e.sender.card || friend?.remark || e.sender.nickname;
-    const msg = e.raw_message;
-    const text = [
+    const { text, images } = resolveMessage(e.message);
+    const msg = [
         '<i>[',
         escapeHTML(group),
         ']</i>\n',
@@ -145,23 +168,59 @@ function pushGroupMsg(e) {
         escapeHTML(sender),
         '</b>',
         '\n',
-        escapeHTML(msg)
+        escapeHTML(text)
     ].join('');
-    push(text);
+    push(msg, images);
 }
 
 
 /**
  * @param {string} text 
  */
-async function push(text, retries = 0) {
+async function push(text, images = [], retries = 0) {
     if(retries > 0) console.log('推送失败，重试第' + retries + '次');
     try {
-        const body = {
-            token: PUSH_TARGET,
-            text: text,
-            html: true,
-            thread_id: THREAD_ID
+        let body;
+        if(images.length == 0) {
+            body = {
+                token: PUSH_TARGET,
+                text: text,
+                html: true,
+                thread_id: THREAD_ID
+            }
+        }
+        else if(images.length == 1) {
+            body = {
+                token: PUSH_TARGET,
+                version: 2,
+                method: 'sendPhoto',
+                params: {
+                    message_thread_id: THREAD_ID,
+                    photo: images[0],
+                    caption: text,
+                    parse_mode: 'HTML'
+                }
+            }
+        }
+        else {
+            const media = [];
+            images.forEach((img) => {
+                media.push({
+                    type: 'image',
+                    media: img,
+                    captoin: text,
+                    parse_mode: 'HTML'
+                })
+            })
+            body = {
+                token: PUSH_TARGET,
+                version: 2,
+                method: 'sendMediaGroup',
+                params: {
+                    message_thread_id: THREAD_ID,
+                    media
+                }
+            }
         }
         console.log(JSON.stringify(body));
         const res = await fetch(API_URL, {
@@ -176,11 +235,11 @@ async function push(text, retries = 0) {
         }
         else {
             console.error(res.statusText);
-            if(retries < MAX_RETRIES) push(text, retries + 1);
+            if(retries < MAX_RETRIES) push(text, images, retries + 1);
         }
     } catch (error) {
         console.error(error);
-        if(retries < MAX_RETRIES) push(text, retries + 1);
+        if(retries < MAX_RETRIES) push(text, images, retries + 1);
     }
 }
 
